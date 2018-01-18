@@ -44,22 +44,19 @@ server.start()
 
 # after the UA server is started initialize the mirrored object
 
-
-
-
-flList = ['Folder1', 'Folder2', 'Folder3']
 PortsList = ['COM1', 'COM2', 'COM3', 'COM4']
 VeloList = ['9600', '19200', '38400', '115000']
 datatypes = [ua.VariantType.Boolean, ua.VariantType.Byte, ua.VariantType.Double, ua.VariantType.String, ua.VariantType.UInt16, ua.VariantType.UInt32]
 datatypes2= ['Boolean', 'Byte', 'Double', 'String', 'UInt16', 'UInt32', 'Float']
 flListopc =[]
 variable = []
+registers = []
 variables = []
 typesfromfl = []
 namesfromfl = []
 values_for_transmit = [0,0,0,0]
 datatype = 'string'
-
+registersnum = 0
 
 status = False
 class App(QMainWindow):
@@ -116,7 +113,7 @@ class App(QMainWindow):
 
         self.labelt = QLabel(self)
         self.labelt.setFont(font)
-        self.labelt.move(250, 140)
+        self.labelt.move(520, 200)
         self.labelt.resize(300, 25)
         self.labelt.setText("Тип данных:")
 
@@ -126,10 +123,27 @@ class App(QMainWindow):
         self.modlabel.resize(300, 25)
         self.modlabel.setText("Modbus устройство:")
 
+        self.modlabel2 = QLabel(self)
+        self.modlabel2.setFont(font)
+        self.modlabel2.move(520, 120)
+        self.modlabel2.resize(300, 25)
+        self.modlabel2.setText("Название переменной:")
+
         self.variable = QLineEdit(self)
         self.variable.setFont(font)
-        self.variable.move(50, 180)
+        self.variable.move(520, 160)
         self.variable.resize(150, 25)
+
+        self.modlabel3 = QLabel(self)
+        self.modlabel3.setFont(font)
+        self.modlabel3.move(720, 120)
+        self.modlabel3.resize(300, 25)
+        self.modlabel3.setText("Начальный регистр:")
+
+        self.startr = QLineEdit(self)
+        self.startr.setFont(font)
+        self.startr.move(720, 160)
+        self.startr.resize(150, 25)
 
         self.value = QLineEdit(self)
         self.value.setFont(font)
@@ -156,6 +170,10 @@ class App(QMainWindow):
         self.buttonmod.move(650, 290)
         self.buttonmod.clicked.connect(self.startModbus)
 
+        self.buttonaddm = QPushButton("Add register", self)
+        self.buttonaddm.move(750, 240)
+        self.buttonaddm.clicked.connect(self.addvariable)
+
         self.buttoncon = QPushButton("Connect", self)
         self.buttoncon.move(550, 290)
         self.buttoncon.clicked.connect(self.connect)
@@ -164,14 +182,9 @@ class App(QMainWindow):
         self.buttonupd.move(750, 290)
         self.buttonupd.clicked.connect(self.Update)
 
-        self.folders = QComboBox(self)
-        self.folders.move(250, 110)
-        self.folders.setFont(font)
-        self.folders.resize(120, 25)
-        self.folders.addItems(flList)
 
         self.datatypes = QComboBox(self)
-        self.datatypes.move(250, 180)
+        self.datatypes.move(520, 230)
         self.datatypes.setFont(font)
         self.datatypes.resize(120, 25)
         self.datatypes.addItems(datatypes2)
@@ -188,10 +201,10 @@ class App(QMainWindow):
         self.velocity.resize(120, 25)
         self.velocity.addItems(VeloList)
 
-
-
-
-
+        #self.regs = QLineEdit(self)
+        #self.regs.setFont(font)
+        #self.regs.move(550, 150)
+        #self.regs.resize(150, 25)
 
         self.frameTable = QFrame(self)
         self.frameTable.move(50, 350)
@@ -203,14 +216,14 @@ class App(QMainWindow):
         fontTable.setPointSize(10)
         self.treeTable.setFont(fontTable)
         self.treeTable.resize(1000,200)
-        self.treeTable.setColumnCount(3)
+        self.treeTable.setColumnCount(4)
         self.treeTable.setRowCount(1)
-        self.treeTable.setHorizontalHeaderLabels(['Имя переменной', 'Значение', 'Тип данных'])
+        self.treeTable.setHorizontalHeaderLabels(['Имя переменной', 'Начальный регистр', 'Тип данных', 'Значение'])
         self.treeTable.resizeColumnsToContents()
-        self.treeTable.setColumnWidth(0, 380)
-        self.treeTable.setColumnWidth(1, 400)
-
-
+        self.treeTable.setColumnWidth(0, 250)
+        self.treeTable.setColumnWidth(1, 250)
+        self.treeTable.setColumnWidth(2, 250)
+        self.treeTable.setColumnWidth(3, 250)
         #self.thread = QThread()
         #self.thread.started.connect(self.getModbus)
         #self.thread.start()
@@ -251,7 +264,7 @@ class App(QMainWindow):
             self.treeTable.setItem(i, 0, QTableWidgetItem(variables[i][0]))
             self.treeTable.setItem(i, 1, QTableWidgetItem(variables[i][1]))
             self.treeTable.setItem(i, 2, QTableWidgetItem(variables[i][2]))
-            i += 1
+
         #with f:
             #data = f.read()
             #print(data)
@@ -262,6 +275,7 @@ class App(QMainWindow):
         global status
         status = True
         print(status)
+
     def connect(self):
         ind = self.ports.currentIndex()
         port = PortsList[ind]
@@ -277,8 +291,35 @@ class App(QMainWindow):
 
     datatypes2 = ['Boolean', 'Byte', 'Double', 'String', 'UInt16', 'UInt32', 'Float']
 
+    def addvariable(self):
+        global registersnum
+        global variables
+        global myobj
+        global idx
+
+        idt = self.datatypes.currentText()
+        name = self.variable.text()
+        startr = self.startr.text()
+        new_var = [name, startr,idt, 0]
+        variables.append(new_var)
+        print(variables)
+        registers.append(int(startr))
+        print(registers)
+        registersnum = registersnum +2
+        print(registersnum)
+
+        myobj.add_variable(idx, name, 0.0)
+
+
+        self.treeTable.setRowCount(len(variables))
+        for i in range(len(variables)):
+            self.treeTable.setItem(i, 0, QTableWidgetItem(variables[i][0]))
+            self.treeTable.setItem(i, 1, QTableWidgetItem(variables[i][1]))
+            self.treeTable.setItem(i, 2, QTableWidgetItem(variables[i][2]))
+
+
     def startModbus(self):
-        self.myThread = ModbusThread()
+        self.myThread = ModbusThread(registersnum, min(registers),1)
         self.myThread.start()
 
     def button_save(self):
@@ -286,12 +327,11 @@ class App(QMainWindow):
 
 
     def Update(self):
-        index = self.folders.currentIndex()
+        bytes = self.regs.text()
+        print(bytes)
         try:
-         dv = ua.DataValue(ua.Variant(5.5, ua.VariantType.Double))
-         myvar = flListopc[index].get_child(["0:Objects", "Folder1"])
-         print(myvar)
-         myvar.set_value(dv)
+         self.myThread.quant = int(bytes)
+         values_for_transmit.append(0)
         except Exception as ex:
          print(ex)
 
@@ -356,51 +396,18 @@ class App(QMainWindow):
         variables.append(new_var)
         print(variables)
         self.treeTable.setRowCount(len(variables))
-        for i in range(0, len(variables)):
+        for i in range(len(variables)):
             self.treeTable.setItem(i, 0, QTableWidgetItem(variables[i][0]))
             self.treeTable.setItem(i, 1, QTableWidgetItem(variables[i][1]))
             self.treeTable.setItem(i, 2, QTableWidgetItem(variables[i][2]))
-            i += 1
-        #variable.append(name, value,datatype)
-        #variables.append(variable)
-        #print(variables)
-
-def getModbus():
- global values_for_transmit
-
- while True:
-
-    try:
-          rr = client.read_holding_registers(0x00, 8, unit=1)
-          #decoder = BinaryPayloadDecoder.fromRegisters(rr.registers, endian=Endian.Little)
-
-          arr = [rr.registers[i:i + 2] for i in range(0, len(rr.registers), 2)]
-          print(arr)
 
 
-          for x in arr:
-            decoder = BinaryPayloadDecoder.fromRegisters(x, endian=Endian.Little)
-            print(decoder.decode_32bit_float())
-            #values_for_transmit[arr.index(x)] = decoder.decode_32bit_float()
-            #print(values_for_transmit)
-            t = x
-            packed_string = struct.pack("HH", *t)
-            unpacked_float = struct.unpack("f", packed_string)[0]
-            print(unpacked_float)
-            print(arr.index(x))
-
-            values_for_transmit[arr.index(x)] = unpacked_float
-
-    except Exception as e:
-          print(e)
-    print(values_for_transmit)
-
- # setup our server
 def connect(port, baudrate):
     global server
     global myobj
     global client
-    my_python_obj = MyObj(server, myobj)
+    global my_python_obj
+    my_python_obj= MyObj(server, myobj)
 
     client = ModbusClient(method='rtu', port=port, timeout=0.5, baudrate=baudrate)
     client.connect()
@@ -408,34 +415,14 @@ def connect(port, baudrate):
                                             rts_level_for_rx=False, loopback=False)
     # client.socket.rs485_mode = rs485_mode
     builder = BinaryPayloadBuilder(endian=Endian.Big)
+
     print('connected')
 
  #finally:
      # close connection, remove subscriptions, etc
      #server.stop()
 
- #try:
-  #server.set_endpoint("opc.tcp://localhost:4840/")
-  #server.set_server_name("Server")
 
-  #a = len(flList)
-  #print(a)
-  #for i in flList:
-    #global objects
-    #i = objects.add_object(idx,i)
-    #flListopc.append(i)
-    #print(flListopc)
- #Object_1 = objects.add_object(idx,'MyFirstObject')
-
- #Object_2 = objects.add_object(idx,'MySecondObject')
- #Object_3 = objects.add_object(idx,'MyThirdObject')
-
- #myfolder = server.nodes.objects.add_folder(idx, "myEmptyFolder")
- #Analog_3 = Object_3.add_variable(idx, 'Analog_3', 50)
-
-  #server.start()
- #except Exception as ex:
-  #   print(ex)
 
 def disconnect():
     global server
@@ -457,49 +444,59 @@ def createXML():
 
 
 class ModbusThread(QThread):
-    def __init__(self):
+    def __init__(self, q, s, slaveid):
         QThread.__init__(self)
+        self.quant = q
+        self.startr = s
+        self.id = slaveid
+
+
 
     def __del__(self):
         self.wait()
 
+    def setParams(self, parA):
+        self.valueA = parA
+
     def run(self):
         global values_for_transmit
         global my_python_obj
+        global variables
 
         while True:
 
             try:
-                rr = client.read_holding_registers(400, 8, unit=1)
+                err = client.read_holding_registers(0, 6, unit=2)
+                print(err)
+                rr = client.read_holding_registers(self.startr, self.quant, unit=self.id)
                 # decoder = BinaryPayloadDecoder.fromRegisters(rr.registers, endian=Endian.Little)
 
-                arr = [rr.registers[i:i + 2] for i in range(0, len(rr.registers), 2)]
-                print(arr)
+                floats = [rr.registers[i:i + 2] for i in range(0, len(rr.registers), 2)]
+                print(floats)
 
-                for x in arr:
-                    decoder = BinaryPayloadDecoder.fromRegisters(x, endian=Endian.Little)
-                    print(decoder.decode_32bit_float())
+                for x in floats:
+                    #decoder = BinaryPayloadDecoder.fromRegisters(x, endian=Endian.Little)
+                    #print(decoder.decode_32bit_float())
                     # values_for_transmit[arr.index(x)] = decoder.decode_32bit_float()
                     # print(values_for_transmit)
                     t = x
                     packed_string = struct.pack("HH", *t)
                     unpacked_float = struct.unpack("f", packed_string)[0]
                     print(unpacked_float)
-                    print(arr.index(x))
+                    print(floats.index(x))
 
-                    values_for_transmit[arr.index(x)] = unpacked_float
+                    values_for_transmit[floats.index(x)] = unpacked_float
 
-                    #my_python_obj.MyVariable = values_for_transmit[1]
-                    #my_python_obj.write('MyVariable')
-                    dv = ua.DataValue(ua.Variant(values_for_transmit[0], ua.VariantType.Float))
-                    my_python_obj.nodes['MyVariable'].set_value(dv)
-                    dv = ua.DataValue(ua.Variant(values_for_transmit[1], ua.VariantType.Float))
-                    my_python_obj.nodes['MyVariable2'].set_value(dv)
+                    dv = ua.DataValue(ua.Variant(values_for_transmit[floats.index(x)], ua.VariantType.Float))
+                    my_python_obj.nodes[variables[floats.index(x)][0]].set_value(dv)
 
+
+                print(rr)
             except Exception as e:
                 print(e)
 
             print(values_for_transmit)
+
 
 
 class SubHandler(object):
@@ -579,7 +576,6 @@ if __name__ == '__main__':
 
      app = QApplication(sys.argv)
      ex = App()
-     my_python_obj = MyObj(server, myobj)
      sys.exit(app.exec_())
 
 
